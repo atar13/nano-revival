@@ -8,6 +8,8 @@
 
 /* ================ USB common Configuration ================ */
 
+#define CONFIG_USB_EHCI_HCOR_RESERVED_DISABLE
+
 #define CONFIG_USB_PRINTF(...) printf(__VA_ARGS__)
 
 #define usb_malloc(size) malloc(size)

@@ -2,6 +2,16 @@
 #include "usbd_cdc.h"
 #include "bflb_mtimer.h"
 #include <stdarg.h>
+
+#include "usb_cdc_acm_interface.h"
+#include "shell.h"
+
+
+volatile uint32_t curr_char = 0;
+USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cmd_buffer[1024];
+extern char const *prompt;
+extern volatile bool display_prompt;
+
 /*!< endpoint address */
 /* Transmissions Device->Host (otherwise known as "IN" in these constants */
 /* Need to be >= 0x80 to be considered a transmission. See                */
@@ -21,6 +31,12 @@
 #define CDC_IN_EP  0x81
 #define CDC_OUT_EP 0x02
 #define CDC_INT_EP 0x85
+
+#ifdef CONFIG_USB_HS
+#define CDC_MAX_MPS 512
+#else
+#define CDC_MAX_MPS 64
+#endif
 
 #define CDC_IN_DBG_EP  0x83
 #define CDC_OUT_DBG_EP 0x04
@@ -82,8 +98,8 @@ static const uint8_t cdc_descriptor[] = {
   /*                                                                                                                            */
   /*                                               The last paramater is the string index for this interface. Linux does not    */
   /*                                               seem to report that anywhere, but maybe Windows does?                        */
-  CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, 0x02),
-  CDC_ACM_DESCRIPTOR_INIT(0x02, CDC_INT_DBG_EP, CDC_OUT_DBG_EP, CDC_IN_DBG_EP, 0x02),
+  CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, CDC_MAX_MPS , 0x02),
+  CDC_ACM_DESCRIPTOR_INIT(0x02, CDC_INT_DBG_EP, CDC_OUT_DBG_EP, CDC_IN_DBG_EP, CDC_MAX_MPS, 0x02),
   ///////////////////////////////////////
   /// string0 descriptor
   ///////////////////////////////////////
@@ -183,11 +199,6 @@ volatile bool ep_dbg_tx_busy_flag = false;
 void (*data_received_ptr)(uint32_t, uint8_t *) = NULL;
 void (*dtr_changed_ptr)(bool);
 
-#ifdef CONFIG_USB_HS
-#define CDC_MAX_MPS 512
-#else
-#define CDC_MAX_MPS 64
-#endif
 
 void debuglog(const char *, ...);
 
@@ -400,3 +411,40 @@ void debugerror(const char *fmt, ...) {
   va_end(args);
 }
 
+void data_received(uint32_t nbytes, uint8_t *bytes) {
+  /* I think we're getting an SOH (Start of Heading) after our output, but not sure why exactly */
+  /* This if statement is a bit fragile (e.g. it doesn't cover SOH + data) */
+  /* so we may need some further processing */
+  if (curr_char == 0 && nbytes == 1 && *bytes == 0x01) return;
+  /* if (nbytes == 1) */
+  /*   debuglog("Received the letter '%c'. curr_char %d\r\n", *bytes, curr_char); */
+  if (curr_char + nbytes >= 1024) {
+    /* We will overflow - bail */
+    debugerror("command too long");
+    output("\r\nCOMMAND TOO LONG\r\n%s", prompt);
+    curr_char = 0;
+    return;
+  }
+  /* Process new data */
+  memcpy(&cmd_buffer[curr_char], bytes, nbytes);
+  raw_output(nbytes, &cmd_buffer[curr_char]); /* Echo data back to console */
+  if (nbytes == 1 && cmd_buffer[curr_char] == '\r') {
+    /* User hit enter, process command */
+    output("\r\n");
+    bflb_mtimer_delay_ms(1); /* There is a microsecond delay as well */
+    cmd_buffer[curr_char] = '\0';
+    debuglog("Processing command '%s'\r\n", &cmd_buffer[0]);
+    process_cmd(&cmd_buffer[0], curr_char - 1);
+    output("%s", prompt);
+    curr_char = 0;
+    return;
+  }
+  curr_char += nbytes;
+}
+
+void dtr_changed(bool dtr) {
+  if (dtr) {
+    debuglog("DTR enabled: requesting prompt\r\n");
+    display_prompt = true;
+  }
+}
