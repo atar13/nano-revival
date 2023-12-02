@@ -6,9 +6,10 @@
 #include "usb_cdc_acm_interface.h"
 #include "shell.h"
 
+#define CMD_BUFFER_SIZE 1024 
 
 volatile uint32_t curr_char = 0;
-USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cmd_buffer[1024];
+USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cmd_buffer[CMD_BUFFER_SIZE];
 extern char const *prompt;
 extern volatile bool display_prompt;
 
@@ -107,18 +108,20 @@ static const uint8_t cdc_descriptor[] = {
   ///////////////////////////////////////
   /// string1 descriptor
   ///////////////////////////////////////
-  0x16,                       /* bLength */
+  0x18,                       /* bLength */
   USB_DESCRIPTOR_TYPE_STRING, /* bDescriptorType */
-  'E', 0x00,                  /* wcChar0 */
-  'm', 0x00,                  /* wcChar1 */
-  'i', 0x00,                  /* wcChar2 */
-  'l', 0x00,                  /* wcChar3 */
-  ' ', 0x00,                  /* wcChar4 */
-  'L', 0x00,                  /* wcChar5 */
+  'n', 0x00,                  /* wcChar0 */
+  'a', 0x00,                  /* wcChar1 */
+  'n', 0x00,                  /* wcChar2 */
+  'o', 0x00,                  /* wcChar3 */
+  '-', 0x00,                  /* wcChar4 */
+  'r', 0x00,                  /* wcChar5 */
   'e', 0x00,                  /* wcChar6 */
-  'r', 0x00,                  /* wcChar7 */
-  'c', 0x00,                  /* wcChar8 */
-  'h', 0x00,                  /* wcChar9 */
+  'v', 0x00,                  /* wcChar7 */
+  'i', 0x00,                  /* wcChar8 */
+  'v', 0x00,                  /* wcChar9 */
+  'a', 0x00,                  /* wcChar10 */
+  'l', 0x00,                  /* wcChar11 */
   ///////////////////////////////////////
   /// string2 descriptor
   ///////////////////////////////////////
@@ -150,11 +153,11 @@ static const uint8_t cdc_descriptor[] = {
   '2', 0x00,                  /* wcChar2 */
   '3', 0x00,                  /* wcChar3 */
   '-', 0x00,                  /* wcChar4 */
-  '0', 0x00,                  /* wcChar5 */
-  '4', 0x00,                  /* wcChar6 */
+  '1', 0x00,                  /* wcChar5 */
+  '1', 0x00,                  /* wcChar6 */
   '-', 0x00,                  /* wcChar7 */
-  '1', 0x00,                  /* wcChar8 */
-  '9', 0x00,                  /* wcChar9 */
+  '0', 0x00,                  /* wcChar8 */
+  '1', 0x00,                  /* wcChar9 */
   ///////////////////////////////////////
   /// string4 descriptor
   ///////////////////////////////////////
@@ -415,10 +418,11 @@ void data_received(uint32_t nbytes, uint8_t *bytes) {
   /* I think we're getting an SOH (Start of Heading) after our output, but not sure why exactly */
   /* This if statement is a bit fragile (e.g. it doesn't cover SOH + data) */
   /* so we may need some further processing */
-  if (curr_char == 0 && nbytes == 1 && *bytes == 0x01) return;
-  /* if (nbytes == 1) */
-  /*   debuglog("Received the letter '%c'. curr_char %d\r\n", *bytes, curr_char); */
-  if (curr_char + nbytes >= 1024) {
+  if (curr_char == 0 && nbytes == 1 && *bytes == 0x01) {
+    return;
+  }
+
+  if (curr_char + nbytes >= CMD_BUFFER_SIZE) {
     /* We will overflow - bail */
     debugerror("command too long");
     output("\r\nCOMMAND TOO LONG\r\n%s", prompt);
