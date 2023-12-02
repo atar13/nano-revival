@@ -9,11 +9,17 @@ Using the [Sipeed M0S module](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m
 
 Built using the [Boufallo SDK](https://github.com/bouffalolab/bouffalo_sdk)
 
-## Components:
+## Firmware:
 
 - [X] Audio playback via DAC peripheral
 - [X] Debugging shell over USB. Thanks to Emil Lerch's [amazing blog post](https://emil.lerch.org/getting-to-hello-world-with-sipeed-m0s-bl616/) ❤️
-- [ ] File loading from SD card
+- [ ] File operations from SD card
+
+## Hardware:
+
+- [X] [M0S Sipeed Module](https://www.aliexpress.us/item/3256804956152184.html?gatewayAdapt=glo2usa4itemAdapt)
+- [X] [microSD Card Breakout Board](https://www.adafruit.com/product/254)
+- [X] [3.5mm Jack Breakout Board](https://www.sparkfun.com/products/11570)
 - [ ] PCB to connect M0S module and external peripherals
 - [ ] 3D printed case
 
