@@ -41,10 +41,19 @@ docker run --rm -t -v $(pwd):/build git.lerch.org/lobo/bouffalo_open_sdk:2f6477f
 
 ## Flash
 
+> [!IMPORTANT]  
+> On the Sipeed M0S Dock, make sure to perform the followings steps before attempting to flash:
+> 1. Unplug USB-C cable
+> 2. Hold down the `BOOT` button
+> 3. While holding down `BOOT`, plug in the USB-C cable
+> 4. Flash 
+>
+> After flashing, reboot board without holding `BOOT` to get out of flashing mode
+
 Specify the device's correct serial port (usually /dev/ttyACM0 on Linux):
 ```sh
 cd firmware
-make flash CPU_ID=m0 CHIP=bl616 COMX=/dev/ttyACM0
+make flash CHIP=bl616 COMX=/dev/ttyACM0
 ```
 
 or
