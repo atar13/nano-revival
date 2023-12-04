@@ -1,3 +1,7 @@
+ifndef VERBOSE
+.SILENT:
+endif
+
 SDK_DEMO_PATH ?= .
 BL_SDK_BASE ?= $(SDK_DEMO_PATH)/../../../Pkgs/bouffalo_sdk
 
@@ -11,3 +15,10 @@ CROSS_COMPILE ?= riscv64-unknown-elf-
 #cmake_definition+=-Dxxx=sss
 
 include $(BL_SDK_BASE)/project.build
+
+lint: 
+	cpplint \
+		--filter=-legal,-readability/casting,-readability/todo \
+		--recursive \
+		./src \
+		./include
