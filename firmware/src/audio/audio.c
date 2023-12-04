@@ -99,7 +99,12 @@ static void audac_init(void) {
     /* audac init */
     audac_hd = bflb_device_get_by_name("audac");
     bflb_audac_init(audac_hd, &audac_init_cfg);
-    bflb_audac_feature_control(audac_hd, AUDAC_CMD_SET_VOLUME_VAL, (size_t)(-15 * 2));
+    /* Set volume value dB, arg range -191 to + 36, 0.5dB step, 
+        range -95.5dB to +18dB. 
+        Note that volume in dB does not scale linearly (seems to be logarithmic)
+    */
+    bflb_audac_feature_control(audac_hd, AUDAC_CMD_SET_VOLUME_VAL,
+        (size_t)(-15 * 2));
     bflb_audac_volume_init(audac_hd, &audac_volume_cfg);
     /* audac enable dma */
     bflb_audac_link_rxdma(audac_hd, true);
