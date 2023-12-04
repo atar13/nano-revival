@@ -17,8 +17,4 @@ CROSS_COMPILE ?= riscv64-unknown-elf-
 include $(BL_SDK_BASE)/project.build
 
 lint: 
-	cpplint \
-		--filter=-legal,-readability/casting,-readability/todo \
-		--recursive \
-		./src \
-		./include
+	./scripts/lint.sh
