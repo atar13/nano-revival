@@ -20,9 +20,6 @@ jobs:
 
       - name: Checkout Repo
         uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.SSH_TOKEN }}
 
       - name: Run cpplint 
         run: cd firmware && make lint 
