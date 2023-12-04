@@ -55,13 +55,18 @@ void run_echo(uint8_t *cmd, uint32_t cmd_len) {
     return;
 }
 
+// calculate uptime since boot
 void run_uptime(uint8_t *cmd, uint32_t cmd_len) {
-    long uptime_ms = uptime();
-    long uptime_s = (uptime_ms / MS_IN_SEC) % SEC_IN_MIN;
-    long uptime_min = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN)) % MIN_IN_HR;
-    long uptime_hr = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN * MIN_IN_HR)) % HR_IN_DAY;
-    long uptime_day = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN * MIN_IN_HR * HR_IN_DAY));
-    output("up %ld day, %ld hours, %ld minutes, %ld seconds", uptime_day, uptime_hr, uptime_min, uptime_s);
+    int64_t uptime_ms = uptime();
+    int64_t uptime_s = (uptime_ms / MS_IN_SEC) % SEC_IN_MIN;
+    int64_t uptime_min = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN)) % MIN_IN_HR;
+    int64_t uptime_hr = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN * MIN_IN_HR)) % HR_IN_DAY; // NOLINT
+    int64_t uptime_day = (uptime_ms / (MS_IN_SEC * SEC_IN_MIN * MIN_IN_HR * HR_IN_DAY)); // NOLINT
+    output("up %ld day, %ld hours, %ld minutes, %ld seconds",
+        uptime_day,
+        uptime_hr,
+        uptime_min,
+        uptime_s);
     bflb_mtimer_delay_ms(1);
     output("\r\n");
     return;
