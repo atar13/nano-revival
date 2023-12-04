@@ -1,21 +1,25 @@
-#include "usbd_core.h"
-#include "usbd_cdc.h"
-#include "bflb_mtimer.h"
+#include "usb/usb_cdc_acm_interface.h"
+
 #include <stdarg.h>
+#include <stdio.h>
 
-#include "usb_cdc_acm_interface.h"
-#include "shell.h"
+#include "usbd_core.h" // NOLINT
+#include "usbd_cdc.h" // NOLINT
+#include "bflb_mtimer.h" // NOLINT
 
+#include "shell/shell.h"
+
+#define CMD_BUFFER_SIZE 1024
 
 volatile uint32_t curr_char = 0;
-USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cmd_buffer[1024];
+USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t cmd_buffer[CMD_BUFFER_SIZE];
 extern char const *prompt;
 extern volatile bool display_prompt;
 
 /*!< endpoint address */
 /* Transmissions Device->Host (otherwise known as "IN" in these constants */
 /* Need to be >= 0x80 to be considered a transmission. See                */
-/* https://github.com/sakumisu/CherryUSB/blob/d7c0add7ef58cfa711cf152c088a7e1c65fa5886/core/usbd_core.c#L1230 */
+/* https://github.com/sakumisu/CherryUSB/blob/d7c0add7ef58cfa711cf152c088a7e1c65fa5886/core/usbd_core.c#L1230 */ // NOLINT
 
 /*
  * Endpoint Address
@@ -91,15 +95,15 @@ extern volatile bool display_prompt;
 
 /*!< global descriptor */
 static const uint8_t cdc_descriptor[] = {
-  USB_DEVICE_DESCRIPTOR_INIT(USB_2_0, 0xEF, 0x02, 0x01, USBD_VID, USBD_PID, 0x0100, 0x01),
-  USB_CONFIG_DESCRIPTOR_INIT(USB_CONFIG_SIZE, 0x04, 0x01, USB_CONFIG_BUS_POWERED, USBD_MAX_POWER),
-  /*                                           ^ - Number of interfaces. We need a seperate in and out channel for each virtual */
-  /*                                               So for each /dev/ttyACMx, add 2 to this number                               */
-  /*                                                                                                                            */
-  /*                                               The last paramater is the string index for this interface. Linux does not    */
-  /*                                               seem to report that anywhere, but maybe Windows does?                        */
-  CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, CDC_MAX_MPS , 0x02),
-  CDC_ACM_DESCRIPTOR_INIT(0x02, CDC_INT_DBG_EP, CDC_OUT_DBG_EP, CDC_IN_DBG_EP, CDC_MAX_MPS, 0x02),
+  USB_DEVICE_DESCRIPTOR_INIT(USB_2_0, 0xEF, 0x02, 0x01, USBD_VID, USBD_PID, 0x0100, 0x01), // NOLINT
+  USB_CONFIG_DESCRIPTOR_INIT(USB_CONFIG_SIZE, 0x04, 0x01, USB_CONFIG_BUS_POWERED, USBD_MAX_POWER), // NOLINT
+  /*                                           ^ - Number of interfaces. We need a seperate in and out channel for each virtual */ // NOLINT 
+  /*                                               So for each /dev/ttyACMx, add 2 to this number                               */ // NOLINT
+  /*                                                                                                                            */ // NOLINT
+  /*                                               The last paramater is the string index for this interface. Linux does not    */ // NOLINT
+  /*                                               seem to report that anywhere, but maybe Windows does?                        */ // NOLINT
+  CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP , 0x02), // NOLINT
+  CDC_ACM_DESCRIPTOR_INIT(0x02, CDC_INT_DBG_EP, CDC_OUT_DBG_EP, CDC_IN_DBG_EP, 0x02), // NOLINT
   ///////////////////////////////////////
   /// string0 descriptor
   ///////////////////////////////////////
@@ -202,15 +206,13 @@ void (*dtr_changed_ptr)(bool);
 
 void debuglog(const char *, ...);
 
-void usbd_configure_done_callback(void)
-{
+void usbd_configure_done_callback(void) {
   /* setup first out ep read transfer */
   usbd_ep_start_read(CDC_OUT_EP, read_buffer, BUFFER_SIZE);
   usbd_ep_start_read(CDC_OUT_DBG_EP, read_buffer, BUFFER_SIZE);
 }
 
-void usbd_cdc_acm_bulk_out(uint8_t ep, uint32_t nbytes)
-{
+void usbd_cdc_acm_bulk_out(uint8_t ep, uint32_t nbytes) {
   USB_LOG_RAW("actual out len:%d\r\n", nbytes);
   debuglog("Bytes received from host. actual out len:%d\r\n", nbytes);
 
@@ -220,8 +222,7 @@ void usbd_cdc_acm_bulk_out(uint8_t ep, uint32_t nbytes)
   usbd_ep_start_read(ep, read_buffer, BUFFER_SIZE);
 }
 
-void usbd_cdc_acm_bulk_in(uint8_t ep, uint32_t nbytes)
-{
+void usbd_cdc_acm_bulk_in(uint8_t ep, uint32_t nbytes) {
   USB_LOG_RAW("actual in len:%d\r\n", nbytes);
 
   if ((nbytes % CDC_MAX_MPS) == 0 && nbytes) {
@@ -230,7 +231,7 @@ void usbd_cdc_acm_bulk_in(uint8_t ep, uint32_t nbytes)
   } else {
     if (ep == CDC_IN_EP) {
       ep_tx_busy_flag = false;
-    }else{
+    } else {
       ep_dbg_tx_busy_flag = false;
     }
   }
@@ -264,8 +265,7 @@ struct usbd_interface intf2;
 struct usbd_interface intf3;
 
 /* function ------------------------------------------------------------------*/
-void cdc_acm_init(void)
-{
+void cdc_acm_init(void) {
   usbd_desc_register(cdc_descriptor);
 
 
@@ -291,8 +291,7 @@ volatile uint8_t dtr_dbg_enable = 0;
  * Callback function from the host based on
  * control flow commands
  */
-void usbd_cdc_acm_set_dtr(uint8_t intf, bool dtr)
-{
+void usbd_cdc_acm_set_dtr(uint8_t intf, bool dtr) {
   /* Based on above init, intf = 0 is normal, intf = 2 is debug */
   if (dtr) {
     debuglog("Data terminal ready (DTR enabled) on intf: %d\r\n", intf);
@@ -318,7 +317,7 @@ int prefix(bool is_debug, uint8_t lvl, uint8_t *buffer) {
   if (!is_debug) return 0;
   int len = 0;
   if (is_color) {
-    len = sprintf((char *)buffer, "\033[32m[%.3f]:\033[00m ", bflb_mtimer_get_time_ms() / 1000.00);
+    len = sprintf((char *)buffer, "\033[32m[%.3f]:\033[00m ", bflb_mtimer_get_time_ms() / 1000.00); // NOLINT
     memcpy(buffer + len, "\033[", 5);
     switch (lvl) {
       case LVL_NORMAL:
@@ -332,8 +331,8 @@ int prefix(bool is_debug, uint8_t lvl, uint8_t *buffer) {
         break;
     }
     len += 8;
-  }else{
-    len = sprintf((char *)buffer, "[%.3f]: ", bflb_mtimer_get_time_ms() / 1000.00);
+  } else {
+    len = sprintf((char *)buffer,"[%.3f]: ", bflb_mtimer_get_time_ms() / 1000.00); //NOLINT
   }
 
   return len;
@@ -345,10 +344,11 @@ int suffix(bool is_debug, uint8_t lvl, uint8_t *buffer, size_t len) {
   memcpy(buffer + len, "\033[00m", 8);
   return len + 8;
 }
+
 void nprintf(uint8_t lvl, const uint8_t ep,  const char *fmt, va_list ap) {
   /* If DTR is not enabled for the desired interface, bail early */
   if (ep == CDC_IN_EP && !dtr_enable) return;
-  if (ep == CDC_IN_DBG_EP && !dtr_dbg_enable) return; // TODO: buffer messages?
+  if (ep == CDC_IN_DBG_EP && !dtr_dbg_enable) return;
 
   size_t max_len = BUFFER_SIZE;
   uint8_t *buffer = NULL;
@@ -361,18 +361,13 @@ void nprintf(uint8_t lvl, const uint8_t ep,  const char *fmt, va_list ap) {
     ep_dbg_tx_busy_flag = true;
   }
   int len = prefix(ep == CDC_IN_DBG_EP, lvl, buffer);
-  len += vsnprintf(
-    (char *)buffer + len,
-    max_len - len,
-    fmt,
-    ap
-    );
+  len += vsnprintf((char *)buffer + len, max_len - len, fmt, ap);
   len = suffix(ep == CDC_IN_DBG_EP, lvl, buffer, len);
   usbd_ep_start_write(ep, buffer, len);
   if (ep == CDC_IN_EP) {
-    //while (ep_tx_busy_flag) {}
-  }else {
-    //while (ep_dbg_tx_busy_flag) {}
+    // while (ep_tx_busy_flag) {}
+  } else {
+    // while (ep_dbg_tx_busy_flag) {}
   }
 }
 
@@ -381,44 +376,50 @@ void raw_output(size_t len, uint8_t *data) {
 
   ep_tx_busy_flag = true;
   usbd_ep_start_write(CDC_IN_EP, data, len);
-  //while (ep_dbg_tx_busy_flag) {}
+  // while (ep_dbg_tx_busy_flag) {}
 }
 
 void output(const char *fmt, ...) {
   va_list args;
-  va_start (args, fmt);
+  va_start(args, fmt);
   nprintf(LVL_NORMAL, CDC_IN_EP, fmt, args);
   va_end(args);
 }
 
 void debuglog(const char *fmt, ...) {
   va_list args;
-  va_start (args, fmt);
+  va_start(args, fmt);
   nprintf(LVL_NORMAL, CDC_IN_DBG_EP, fmt, args);
   va_end(args);
 }
 
 void debugwarn(const char *fmt, ...) {
   va_list args;
-  va_start (args, fmt);
+  va_start(args, fmt);
   nprintf(LVL_WARN, CDC_IN_DBG_EP, fmt, args);
   va_end(args);
 }
+
 void debugerror(const char *fmt, ...) {
   va_list args;
-  va_start (args, fmt);
+  va_start(args, fmt);
   nprintf(LVL_ERROR, CDC_IN_DBG_EP, fmt, args);
   va_end(args);
 }
 
+// data_received handles incoming user input
 void data_received(uint32_t nbytes, uint8_t *bytes) {
-  /* I think we're getting an SOH (Start of Heading) after our output, but not sure why exactly */
-  /* This if statement is a bit fragile (e.g. it doesn't cover SOH + data) */
-  /* so we may need some further processing */
-  if (curr_char == 0 && nbytes == 1 && *bytes == 0x01) return;
-  /* if (nbytes == 1) */
-  /*   debuglog("Received the letter '%c'. curr_char %d\r\n", *bytes, curr_char); */
-  if (curr_char + nbytes >= 1024) {
+  /* 
+    I think we're getting an SOH (Start of Heading) after our output, 
+    but not sure why exactly.
+    This if statement is a bit fragile (e.g. it doesn't cover SOH + data) 
+    so we may need some further processing 
+  */
+  if (curr_char == 0 && nbytes == 1 && *bytes == 0x01) {
+    return;
+  }
+
+  if (curr_char + nbytes >= CMD_BUFFER_SIZE) {
     /* We will overflow - bail */
     debugerror("command too long");
     output("\r\nCOMMAND TOO LONG\r\n%s", prompt);

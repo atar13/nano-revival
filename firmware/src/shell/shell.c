@@ -1,9 +1,10 @@
-#include "bflb_mtimer.h"
 #include <string.h>
+#include <stdint.h>
 
-#include "usb_cdc_acm_interface.h"
+#include "bflb_mtimer.h" // NOLINT
 
-#include "audio.h"
+#include "usb/usb_cdc_acm_interface.h"
+#include "audio/audio.h"
 
 extern const char* prompt;
 extern clock_t boot_time;
@@ -30,19 +31,21 @@ void run_audio_play(uint8_t *cmd, uint32_t cmd_len);
 void run_audio_stop(uint8_t *cmd, uint32_t cmd_len);
 
 
-void process_cmd(uint8_t *cmd, uint32_t cmd_len){
-  if (strncmp((char *)cmd, echo_cmd, strlen(echo_cmd)) == 0){
-      run_echo(cmd, cmd_len);
-  } else if (strncmp((char *)cmd, uptime_cmd, strlen(uptime_cmd)) == 0) {
-      run_uptime(cmd, cmd_len);
-  } else if (strncmp((char *)cmd, audio_load_cmd, strlen(audio_load_cmd)) == 0) {
-      run_audio_load(cmd, cmd_len);
-  } else if (strncmp((char *)cmd, audio_play_cmd, strlen(audio_play_cmd)) == 0) {
-      run_audio_play(cmd, cmd_len);
-  } else if (strncmp((char *)cmd, audio_stop_cmd, strlen(audio_stop_cmd)) == 0) {
-      run_audio_stop(cmd, cmd_len);
+void process_cmd(uint8_t *cmd, uint32_t cmd_len) {
+  char* char_cmd = (char *)cmd;
+  if (!strncmp(char_cmd, echo_cmd, strlen(echo_cmd))) {
+    run_echo(cmd, cmd_len);
+  } else if (!strncmp(char_cmd, uptime_cmd, strlen(uptime_cmd))) {
+    run_uptime(cmd, cmd_len);
+  } else if (!strncmp(char_cmd, audio_load_cmd, strlen(audio_load_cmd))) {
+    run_audio_load(cmd, cmd_len);
+  } else if (!strncmp(char_cmd, audio_play_cmd, strlen(audio_play_cmd))) {
+    run_audio_play(cmd, cmd_len);
+  } else if (!strncmp(char_cmd, audio_stop_cmd, strlen(audio_stop_cmd))) {
+    run_audio_stop(cmd, cmd_len);
   }
 }
+
 
 
 void run_echo(uint8_t *cmd, uint32_t cmd_len) {

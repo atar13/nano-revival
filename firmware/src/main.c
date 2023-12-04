@@ -2,19 +2,18 @@
 #include <time.h>
 #include <stdio.h>
 
-#include "usbh_core.h"
-#include "bflb_mtimer.h"
-#include "board.h"
+#include "bflb_mtimer.h" // NOLINT
+#include "board.h" // NOLINT
+#include "usbh_core.h" // NOLINT
+#include "usbd_core.h" // NOLINT
+#include "usbd_cdc.h" // NOLINT
 
-#include "usbd_core.h"
-#include "usbd_cdc.h"
-
-#include "usb_cdc_acm_interface.h"
-#include "audio.h"
+#include "usb/usb_cdc_acm_interface.h"
+#include "audio/audio.h"
 
 uint32_t buffer_init(char *);
 
-clock_t boot_time; 
+clock_t boot_time;
 
 volatile bool display_prompt = false;
 const char *prompt = "$ ";

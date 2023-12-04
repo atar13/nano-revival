@@ -1,49 +1,47 @@
-#include "bflb_audac.h"
-#include "bflb_gpio.h"
-#include "bflb_dma.h"
-#include "bflb_l1c.h"
+#include "bflb_audac.h" // NOLINT
+#include "bflb_gpio.h" // NOLINT
+#include "bflb_dma.h" // NOLINT
+#include "bflb_l1c.h" // NOLINT
+#include "bl616_glb.h" // NOLINT
+#include "board.h" // NOLINT
 
-#include "bl616_glb.h"
-#include "board.h"
-
-#include "audio.h"
+#include "audio/audio.h"
 
 struct bflb_device_s *audac_dma_hd;
 struct bflb_device_s *audac_hd;
 static struct bflb_dma_channel_lli_pool_s lli_pool[10];
 
-void audio_dma_callback(void *arg)
-{
+void audio_dma_callback(void *arg) {
     static uint16_t num = 0;
     num++;
     printf("scyle_n:%d\r\n", num);
 }
 
-void audac_gpio_init(void)
-{
+void audac_gpio_init(void) {
     struct bflb_device_s *gpio;
 
     gpio = bflb_device_get_by_name("gpio");
 
-    /* audac pwm output mode */
-    bflb_gpio_init(gpio, GPIO_PIN_14, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
-    bflb_gpio_init(gpio, GPIO_PIN_15, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
+    // gnd is ring2 according to CTIA format https://www.headphonesty.com/2019/04/headphone-jacks-plugs-explained/#4conductor_plug_TRRS // NOLINT
+    // GPIO_PIN_14 is right stereo output on ring1
+    bflb_gpio_init(gpio, GPIO_PIN_14, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
+    // GPIO_PIN_15 is left stereo output on tip
+    bflb_gpio_init(gpio, GPIO_PIN_15, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
 
-    // bflb_gpio_init(gpio, GPIO_PIN_22, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
-    // bflb_gpio_init(gpio, GPIO_PIN_23, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
-
-    // bflb_gpio_init(gpio, GPIO_PIN_27, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
-    // bflb_gpio_init(gpio, GPIO_PIN_28, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
+    // bflb_gpio_init(gpio, GPIO_PIN_22, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
+    // bflb_gpio_init(gpio, GPIO_PIN_23, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
+                                                                                                                         // NOLINT
+    // bflb_gpio_init(gpio, GPIO_PIN_27, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
+    // bflb_gpio_init(gpio, GPIO_PIN_28, GPIO_FUNC_AUDAC_PWM | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2); // NOLINT
 
     /* PA enable */
-    bflb_gpio_init(gpio, GPIO_PIN_10, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
-    bflb_gpio_init(gpio, GPIO_PIN_11, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0);
+    bflb_gpio_init(gpio, GPIO_PIN_10, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0); // NOLINT
+    bflb_gpio_init(gpio, GPIO_PIN_11, GPIO_OUTPUT | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_0); // NOLINT
     bflb_gpio_set(gpio, GPIO_PIN_10);
     bflb_gpio_set(gpio, GPIO_PIN_11);
 }
 
-void transfer_to_dma(uint16_t *samples, uint16_t num_samples)
-{
+void transfer_to_dma(uint16_t *samples, uint16_t num_samples) {
     uint32_t dma_lli_cnt;
     struct bflb_dma_channel_lli_transfer_s transfers[1];
     struct bflb_dma_channel_config_s audac_dma_cfg;
@@ -69,13 +67,13 @@ void transfer_to_dma(uint16_t *samples, uint16_t num_samples)
     bflb_l1c_dcache_clean_all();
     // bflb_l1c_dcache_clean_range(samples, num_samples);
     // csi_dcache_clean_range(samples, num_samples);
-    dma_lli_cnt = bflb_dma_channel_lli_reload(audac_dma_hd, lli_pool, 10, transfers, 1);
+    dma_lli_cnt = bflb_dma_channel_lli_reload(audac_dma_hd, lli_pool, 10,
+        transfers, 1);
     bflb_dma_channel_lli_link_head(audac_dma_hd, lli_pool, dma_lli_cnt);
 }
 
 /* audio dac init */
-static void audac_init(void)
-{
+static void audac_init(void) {
     struct bflb_audac_init_config_s audac_init_cfg = {
         .sampling_rate = AUDAC_SAMPLING_RATE_32K,
         .output_mode = AUDAC_OUTPUT_MODE_PWM,

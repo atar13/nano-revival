@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef CHERRYUSB_CONFIG_H
-#define CHERRYUSB_CONFIG_H
+#ifndef CHERRYUSB_CONFIG_H // NOLINT
+#define CHERRYUSB_CONFIG_H // NOLINT
 
 /* ================ USB common Configuration ================ */
 
@@ -98,7 +98,7 @@
 #define CONFIG_USBHOST_PSC_STACKSIZE 2048
 #endif
 
-//#define CONFIG_USBHOST_GET_STRING_DESC
+// #define CONFIG_USBHOST_GET_STRING_DESC
 
 /* Ep0 max transfer buffer */
 #define CONFIG_USBHOST_REQUEST_BUFFER_LEN 512
@@ -113,9 +113,9 @@
 
 /* ================ USB Device Port Configuration ================*/
 
-//#define USBD_IRQHandler USBD_IRQHandler
-//#define USB_BASE (0x40080000UL)
-//#define USB_NUM_BIDIR_ENDPOINTS 4
+// #define USBD_IRQHandler USBD_IRQHandler
+// #define USB_BASE (0x40080000UL)
+// #define USB_NUM_BIDIR_ENDPOINTS 4
 
 /* ================ USB Host Port Configuration ==================*/
 
@@ -131,4 +131,4 @@
 // #define CONFIG_USB_EHCI_CONFIGFLAG
 // #define CONFIG_USB_EHCI_PORT_POWER
 
-#endif
+#endif // NOLINT
