@@ -1,0 +1,31 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: cpplint 
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Debian Packages 
+        run: sudo apt update && sudo apt install python3 python3-pip 
+
+      - name: Install Pip Packages
+        run: pip3 install cpplint
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.SSH_TOKEN }}
+
+      - name: Run cpplint 
+        run: cd firmware && make lint 
+
+
+
