@@ -18,6 +18,8 @@ clock_t uptime() {
 #define MIN_IN_HR 60
 #define HR_IN_DAY 24
 
+// TODO cmds: exit, help, volume control
+
 const char *echo_cmd = "echo";
 const char *uptime_cmd = "uptime";
 const char *audio_load_cmd = "audio-load";
@@ -73,19 +75,16 @@ void run_uptime(uint8_t *cmd, uint32_t cmd_len) {
 }
 
 
-static uint16_t samples[8] = {
-    // 0x0000, 0x30FB, 0x5A81, 0x7640, 0x7FFF, 0x7640, 0x5A81, 0x30FB,
-    // 0x0000, 0xCF05, 0xA57F, 0x89C0, 0x8001, 0x89C0, 0xA57F, 0xCF05,
-    // 500, 500, 500, 500, 500, 500, 500, 500
-    0, 0, 0, 0, 0, 0, 0, 0
-};
-
 
 void run_audio_load(uint8_t *cmd, uint32_t cmd_len) {
-    audio_out_load_samples(samples, 16);
+    Sound* s = oscillating_sound(200);
+    audio_out_load_samples(s->samples, s->num_samples);
     output("have %d samples after load\r\n", audio_out_get_fifo_cnt());
     bflb_mtimer_delay_ms(1);
     output("\r\n");
+    // should be able to safely free samples memory now that it's
+    // been copied to DMA peripheral
+    free_sound(s);
     return;
 }
 

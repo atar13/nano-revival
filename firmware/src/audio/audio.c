@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "bflb_audac.h" // NOLINT
 #include "bflb_gpio.h" // NOLINT
 #include "bflb_dma.h" // NOLINT
@@ -6,10 +8,27 @@
 #include "board.h" // NOLINT
 
 #include "audio/audio.h"
+#include "utils/trig.h"
+
+const int AMPLITUDE_RANGE = 0x7FF;
+const int MID_AMPLITUDE = 0x000;
 
 struct bflb_device_s *audac_dma_hd;
 struct bflb_device_s *audac_hd;
 static struct bflb_dma_channel_lli_pool_s lli_pool[10];
+
+// Allocates memory for a new Sound and its associated samples
+Sound* new_sound(uint32_t num_samples) {
+    Sound* s = malloc(sizeof(Sound));
+    s->samples = malloc(num_samples * sizeof(uint16_t));
+    return s;
+}
+
+// Frees memory of Sound and underlying samples
+void free_sound(Sound* s) {
+    free(s->samples);
+    free(s);
+}
 
 void audio_dma_callback(void *arg) {
     static uint16_t num = 0;
@@ -103,8 +122,10 @@ static void audac_init(void) {
         range -95.5dB to +18dB. 
         Note that volume in dB does not scale linearly (seems to be logarithmic)
     */
+    // bflb_audac_feature_control(audac_hd, AUDAC_CMD_SET_VOLUME_VAL,
+    //     (size_t)(-15 * 2));
     bflb_audac_feature_control(audac_hd, AUDAC_CMD_SET_VOLUME_VAL,
-        (size_t)(-15 * 2));
+        (size_t)(0 * 2));
     bflb_audac_volume_init(audac_hd, &audac_volume_cfg);
     /* audac enable dma */
     bflb_audac_link_rxdma(audac_hd, true);
@@ -150,4 +171,58 @@ int audio_out_get_fifo_cnt(void) {
 
 void audio_out_register_dma_callback(void (*f)(void *arg)) {
     bflb_dma_channel_irq_attach(audac_dma_hd, f, NULL);
+}
+
+// oscillating_sound generates a sound that oscilaltes at a
+// frequency
+Sound* oscillating_sound(uint16_t freq_hz) {
+    const int SAMPLING_RATE = 32000;
+
+    const int PERIOD = SAMPLING_RATE/freq_hz;
+    const int TWO_CH_PERIOD = 2 * PERIOD;
+    const int NUM_STEPS = TWO_CH_PERIOD / 8;
+    const int STEP = AMPLITUDE_RANGE / NUM_STEPS;
+
+    Sound* sound = new_sound(TWO_CH_PERIOD);
+    sound->num_samples = TWO_CH_PERIOD;
+    sound->sampling_rate = SAMPLING_RATE;
+
+    for (int i = 0; i < TWO_CH_PERIOD - 1; i+=2) {
+        int sin_lut_idx = (256 * i) / TWO_CH_PERIOD;
+        // use sine look up table to avoid math.h sine function
+        // and floating point operations
+        uint16_t sound_amplitude = audio_out_sin_lut[sin_lut_idx];
+
+        sound->samples[i] = sound_amplitude;
+        sound->samples[i+1] = sound_amplitude;
+    }
+
+    return sound;
+}
+
+
+// Slower version that generates a sound of a single note using math.h sine
+// function and floating point math
+Sound* fp_oscillating_sound(uint16_t freq_hz) {
+    const int SAMPLING_RATE = 32000;
+    const int AMPLITUDE = 0x7FF;
+    const int MID = 0;
+
+    const int PERIOD = SAMPLING_RATE/freq_hz;
+    const int TWO_CH_PERIOD = 2 * PERIOD;
+
+    Sound* sound = new_sound(TWO_CH_PERIOD);
+    sound->num_samples = TWO_CH_PERIOD;
+    sound->sampling_rate = SAMPLING_RATE;
+
+    for (int i = 0; i < TWO_CH_PERIOD - 1; i+=2) {
+        uint16_t sound_amplitude = (AMPLITUDE *
+            sin((double)(i % (TWO_CH_PERIOD))/((double)TWO_CH_PERIOD) *
+                2 * M_PI))
+            + MID;
+        sound->samples[i] = sound_amplitude;
+        sound->samples[i+1] = sound_amplitude;
+    }
+
+    return sound;
 }
